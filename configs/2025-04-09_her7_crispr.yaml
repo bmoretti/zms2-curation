@@ -1,0 +1,43 @@
+# Configuration for manual curation of MS2 spots
+
+# Experiment metadata
+experiment:
+  name: "her7_crispr"
+  date: "2025-04-09"
+
+# Data paths
+data:
+  # Path to the OME-Zarr file containing both MCP and H2B channels
+  raw_data: "/hpc/projects/group.royer/people/bruno.moretti/data/epfl/2025-04-09/her7_crispr/20250409_122017_Experiment/stabilized.zarr"
+
+  # Path to segmentation
+  segments: "/hpc/projects/group.royer/people/bruno.moretti/data/epfl/2025-04-09/her7_crispr/20250409_122017_Experiment/tracking/results/segments.zarr"
+
+  # Path to tracks CSV
+  tracks: "/hpc/projects/group.royer/people/bruno.moretti/data/epfl/2025-04-09/her7_crispr/20250409_122017_Experiment/tracking/results/tracks.csv"
+
+  # Path to automatic spots (optional - for comparison/visualization)
+  # Set to null to disable automatic spots loading
+  spots: "/hpc/projects/group.royer/people/bruno.moretti/data/epfl/2025-04-09/her7_crispr/20250409_122017_Experiment/spots/spots_quant.pkl"
+
+
+# Output directory for curated points
+output:
+  directory: "/hpc/projects/group.royer/people/bruno.moretti/data/epfl/2025-04-09/her7_crispr/20250409_122017_Experiment/manual_curation"
+
+# Curation settings
+curation:
+  # Padding around nucleus bounding box (z, y, x) in pixels
+  # Current values: ~17 µm in z, ~26 µm in x-y at 0.347 µm/pixel
+  crop_padding:
+    z: 50
+    y: 75
+    x: 75
+
+  # Preload data into memory for faster scrolling?
+  # true = load entire crop into RAM (fast scrolling, uses memory)
+  # false = lazy loading from disk (slower scrolling, less memory)
+  preload_to_memory: true
+
+  # Show automatic spots in napari for comparison?
+  show_auto_spots: true
