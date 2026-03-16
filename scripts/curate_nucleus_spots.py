@@ -22,6 +22,10 @@ import dask.array as da
 import yaml
 from pathlib import Path
 from napari_keybindings import setup_navigation_keybindings, setup_save_keybinding
+from curation_utils import (
+    compute_padded_bounds, centroid_bounds_from_tracks,
+    crop_to_global_coords, global_to_crop_coords,
+)
 
 
 # ============================================================================
@@ -137,7 +141,7 @@ def compute_nucleus_bounds(nucleus_id, padding=(50, 75, 75)):
     """
     print(f"\nComputing bounding box for nucleus {nucleus_id}...")
 
-    # Load tracks CSV - much faster than scanning segmentation!
+    # Load tracks CSV
     print(f"Loading tracks from {tracks_path}...")
     tracks_df = pd.read_csv(tracks_path)
 
@@ -149,67 +153,33 @@ def compute_nucleus_bounds(nucleus_id, padding=(50, 75, 75)):
 
     print(f"Found nucleus in {len(nucleus_tracks)} timepoints")
 
-    # Extract coordinates
-    t_indices = nucleus_tracks['t'].values
-    z_coords = nucleus_tracks['z'].values
-    y_coords = nucleus_tracks['y'].values
-    x_coords = nucleus_tracks['x'].values
+    # Extract coordinates and compute centroid bounds
+    centroid_bounds = centroid_bounds_from_tracks(
+        nucleus_tracks['t'].values,
+        nucleus_tracks['z'].values,
+        nucleus_tracks['y'].values,
+        nucleus_tracks['x'].values,
+    )
 
-    # Compute bounding box from centroids
-    # Note: tracks contain centroids, so we need to round and add extra padding
-    # to ensure we capture the full nucleus
-    t_min, t_max = int(t_indices.min()), int(t_indices.max())
-    z_min, z_max = int(np.floor(z_coords.min())), int(np.ceil(z_coords.max()))
-    y_min, y_max = int(np.floor(y_coords.min())), int(np.ceil(y_coords.max()))
-    x_min, x_max = int(np.floor(x_coords.min())), int(np.ceil(x_coords.max()))
-
-    print(f"Centroid bounds: t=[{t_min}, {t_max}], z=[{z_min}, {z_max}], "
-          f"y=[{y_min}, {y_max}], x=[{x_min}, {x_max}]")
-
-    # Add padding (includes both context padding AND extra for nucleus size)
-    # Since we're using centroids, add extra to ensure full nucleus is captured
-    pad_z, pad_y, pad_x = padding
+    print(f"Centroid bounds: t=[{centroid_bounds['t_min']}, {centroid_bounds['t_max']}], "
+          f"z=[{centroid_bounds['z_min']}, {centroid_bounds['z_max']}], "
+          f"y=[{centroid_bounds['y_min']}, {centroid_bounds['y_max']}], "
+          f"x=[{centroid_bounds['x_min']}, {centroid_bounds['x_max']}]")
 
     # Load data to get full shape
     data_zarr = zarr.open(data_path, 'r')
     if isinstance(data_zarr, zarr.hierarchy.Group):
         data_zarr = data_zarr['0']
 
-    t_size, _, z_size, y_size, x_size = data_zarr.shape
+    # Compute padded and clamped bounds
+    result = compute_padded_bounds(centroid_bounds, padding, data_zarr.shape)
 
-    t_min_pad = max(0, t_min)
-    t_max_pad = min(t_size, t_max + 1)  # +1 because slicing is exclusive
-    z_min_pad = max(0, z_min - pad_z)
-    z_max_pad = min(z_size, z_max + pad_z + 1)
-    y_min_pad = max(0, y_min - pad_y)
-    y_max_pad = min(y_size, y_max + pad_y + 1)
-    x_min_pad = max(0, x_min - pad_x)
-    x_max_pad = min(x_size, x_max + pad_x + 1)
+    s = result['slices']
+    print(f"Padded bounds: t=[{s['t'].start}, {s['t'].stop}), z=[{s['z'].start}, {s['z'].stop}), "
+          f"y=[{s['y'].start}, {s['y'].stop}), x=[{s['x'].start}, {s['x'].stop})")
+    print(f"Crop shape (t, z, y, x): {result['shape']}")
 
-    print(f"Padded bounds: t=[{t_min_pad}, {t_max_pad}), z=[{z_min_pad}, {z_max_pad}), "
-          f"y=[{y_min_pad}, {y_max_pad}), x=[{x_min_pad}, {x_max_pad})")
-
-    crop_shape = (t_max_pad - t_min_pad,
-                  z_max_pad - z_min_pad,
-                  y_max_pad - y_min_pad,
-                  x_max_pad - x_min_pad)
-    print(f"Crop shape (t, z, y, x): {crop_shape}")
-
-    return {
-        'slices': {
-            't': slice(t_min_pad, t_max_pad),
-            'z': slice(z_min_pad, z_max_pad),
-            'y': slice(y_min_pad, y_max_pad),
-            'x': slice(x_min_pad, x_max_pad),
-        },
-        'offsets': {
-            't': t_min_pad,
-            'z': z_min_pad,
-            'y': y_min_pad,
-            'x': x_min_pad,
-        },
-        'shape': crop_shape,
-    }
+    return result
 
 
 def load_cropped_data(nucleus_id, padding=(50, 75, 75)):
@@ -317,13 +287,13 @@ def save_curation():
         return None
 
     # Convert from crop coordinates to global coordinates
-    t_offset, z_offset, y_offset, x_offset = crop_offsets
+    global_points = crop_to_global_coords(points, crop_offsets)
 
     df = pd.DataFrame()
-    df['t'] = points[:, 0] + t_offset
-    df['z'] = points[:, 1] + z_offset
-    df['y'] = points[:, 2] + y_offset
-    df['x'] = points[:, 3] + x_offset
+    df['t'] = global_points[:, 0]
+    df['z'] = global_points[:, 1]
+    df['y'] = global_points[:, 2]
+    df['x'] = global_points[:, 3]
     df['nucleus_id'] = nucleus_id
 
     # Save
