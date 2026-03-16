@@ -41,3 +41,13 @@ curation:
 
   # Show automatic spots in napari for comparison?
   show_auto_spots: true
+
+  # Live intensity quantification: show intensity vs time plot in napari
+  # Requires zms2 package (set zms2_path below if not on PYTHONPATH)
+  live_quantification: true
+
+  # Channel containing the spot signal (0=H2B, 1=MCP)
+  spot_channel: 1
+
+# Optional: path to zms2 package (if not already on PYTHONPATH)
+zms2_path: "/hpc/projects/group.royer/people/bruno.moretti/code/zms2"

@@ -14,6 +14,7 @@ Workflow:
 The crop includes padding around the nucleus to provide spatial context.
 """
 
+import sys
 import napari
 import pandas as pd
 import numpy as np
@@ -75,6 +76,24 @@ crop_padding = (
 )
 preload_to_memory = config['curation']['preload_to_memory']
 show_auto_spots = config['curation']['show_auto_spots']
+
+# Live quantification settings
+live_quant_enabled = config['curation'].get('live_quantification', False)
+spot_channel = config['curation'].get('spot_channel', 1)
+
+# Try to import zms2 for live quantification
+_live_quant_available = False
+if live_quant_enabled:
+    zms2_path = config.get('zms2_path')
+    if zms2_path:
+        sys.path.insert(0, zms2_path)
+    try:
+        from zms2.spots.detection import extract_spot_voxels_from_zarr
+        from zms2.spots.quantification import quantify_spots
+        from live_quantification import LiveIntensityWidget
+        _live_quant_available = True
+    except ImportError as e:
+        print(f"Warning: Live quantification enabled but zms2 not available: {e}")
 
 
 # ============================================================================
@@ -475,6 +494,24 @@ def init_viewer():
                 scale=scale
             )
             print(f"\n  Added {len(auto_points)} automatic spots (cyan) for comparison")
+
+    # Initialize live quantification widget if available
+    if live_quant_enabled and _live_quant_available:
+        # Determine zarr array path for voxel extraction
+        zarr_array_path = data_path
+        z = zarr.open(data_path, 'r')
+        if isinstance(z, zarr.hierarchy.Group):
+            zarr_array_path = str(Path(data_path) / '0')
+
+        LiveIntensityWidget(
+            viewer=viewer,
+            zarr_path=zarr_array_path,
+            spot_channel=spot_channel,
+            crop_offsets=crop_offsets,
+            extract_fn=extract_spot_voxels_from_zarr,
+            quantify_fn=quantify_spots,
+        )
+        print("\nLive intensity quantification enabled")
 
     print("\n" + "="*70)
     print("Napari viewer initialized with cropped data")
