@@ -23,7 +23,7 @@ data:
 
 # Output directory for curated points
 output:
-  directory: "/hpc/projects/group.royer/people/bruno.moretti/data/epfl/2025-04-17/20250417_142938_Experiment/spots/manual_curation"
+  directory: "/hpc/projects/group.royer/people/bruno.moretti/data/epfl/2025-04-17/20250417_142938_Experiment/spots/manual_curation_tests"
 
 # Curation settings
 curation:
@@ -37,7 +37,7 @@ curation:
   # Preload data into memory for faster scrolling?
   # true = load entire crop into RAM (fast scrolling, uses memory)
   # false = lazy loading from disk (slower scrolling, less memory)
-  preload_to_memory: true
+  preload_to_memory: false
 
   # Show automatic spots in napari for comparison?
   show_auto_spots: true

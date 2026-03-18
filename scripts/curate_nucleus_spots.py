@@ -8,7 +8,7 @@ Workflow:
 1. Set nucleus_id in the CONFIG section below
 2. Run the script - it will automatically crop to the nucleus region
 3. Add points manually on the MS2 spots you see
-4. The script auto-saves periodically, or you can call save_curation() manually
+4. Call save_curation() in the napari console to save
 5. Points are automatically converted to global coordinates when saved
 
 The crop includes padding around the nucleus to provide spatial context.
@@ -22,7 +22,7 @@ import zarr
 import dask.array as da
 import yaml
 from pathlib import Path
-from napari_keybindings import setup_navigation_keybindings, setup_save_keybinding
+from napari_keybindings import setup_navigation_keybindings
 from curation_utils import (
     compute_padded_bounds, centroid_bounds_from_tracks,
     crop_to_global_coords, global_to_crop_coords,
@@ -33,7 +33,7 @@ from curation_utils import (
 # CONFIG - Edit these for your dataset and nucleus
 # ============================================================================
 # Path to YAML config file for the dataset
-config_file = '../configs/curation/2025-04-17_wt.yaml'
+config_file = '../configs/2025-04-17_wt.yaml'
 
 # Nucleus ID to curate
 nucleus_id = 187620 # SET THIS! e.g., 1234
@@ -47,7 +47,7 @@ def load_config(config_path):
 
     # If relative path, resolve relative to script location
     if not config_file.is_absolute():
-        script_dir = Path(__file__).parent.parent.parent  # Go up to repo root
+        script_dir = Path(__file__).parent  # scripts/ directory
         config_file = script_dir / config_path
 
     if not config_file.exists():
@@ -101,6 +101,7 @@ if live_quant_enabled:
 # ============================================================================
 viewer = None           # Napari viewer instance
 crop_offsets = None     # (t_offset, z_offset, y_offset, x_offset) for coordinate conversion
+live_widget = None      # Live intensity quantification widget
 nucleus_bounds = None   # Store bounds info for debugging
 
 
@@ -322,7 +323,7 @@ def save_curation():
 
     print(f"\n✓ Saved {len(points)} points for nucleus {nucleus_id} to {save_path}")
     print(f"  Points converted from crop coordinates to global coordinates")
-    print(f"  Offsets applied: t+{t_offset}, z+{z_offset}, y+{y_offset}, x+{x_offset}")
+    print(f"  Offsets applied: t+{crop_offsets[0]}, z+{crop_offsets[1]}, y+{crop_offsets[2]}, x+{crop_offsets[3]}")
 
     return df
 
@@ -352,14 +353,8 @@ def resume_curation():
     df = pd.read_csv(save_path)
 
     # Convert from global coordinates to crop coordinates
-    t_offset, z_offset, y_offset, x_offset = crop_offsets
-
-    points_data = np.column_stack([
-        df['t'].values - t_offset,
-        df['z'].values - z_offset,
-        df['y'].values - y_offset,
-        df['x'].values - x_offset,
-    ])
+    global_points = df[['t', 'z', 'y', 'x']].values
+    points_data = global_to_crop_coords(global_points, crop_offsets)
 
     # Add to viewer
     viewer.add_points(points_data, name=f'nucleus_{nucleus_id}_points', size=4)
@@ -391,7 +386,6 @@ def init_viewer():
 
     # Setup custom key bindings for easy navigation
     setup_navigation_keybindings(viewer)
-    setup_save_keybinding(viewer, save_curation)
 
     # Add image channels
     data = crop_data['data']
@@ -480,7 +474,7 @@ def init_viewer():
                 auto_spots_df['z'].values - z_offset,
                 auto_spots_df['y'].values - y_offset,
                 auto_spots_df['x'].values - x_offset,
-            ])
+            ]).astype(np.float64)
 
             # Add as a points layer (different color/size from manual)
             viewer.add_points(
@@ -488,8 +482,8 @@ def init_viewer():
                 name='Auto_spots',
                 size=3,
                 face_color='cyan',
-                edge_color='white',
-                edge_width=0.5,
+                border_color='white',
+                border_width=0.5,
                 opacity=0.7,
                 scale=scale
             )
@@ -503,7 +497,8 @@ def init_viewer():
         if isinstance(z, zarr.hierarchy.Group):
             zarr_array_path = str(Path(data_path) / '0')
 
-        LiveIntensityWidget(
+        global live_widget
+        live_widget = LiveIntensityWidget(
             viewer=viewer,
             zarr_path=zarr_array_path,
             spot_channel=spot_channel,
@@ -519,7 +514,7 @@ def init_viewer():
     print("\nWorkflow:")
     print("  1. Add a Points layer (Ctrl+P or via the layer controls)")
     print("  2. Manually mark MS2 spots by clicking")
-    print("  3. Press Ctrl+S to save (or call save_curation() manually)")
+    print("  3. Call save_curation() in the napari console to save")
     print("  4. To resume existing work, call resume_curation()")
     print("\nNavigation:")
     print("  r/f: Move up/down in Z-axis")

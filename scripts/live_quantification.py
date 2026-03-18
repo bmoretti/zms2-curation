@@ -7,11 +7,13 @@ Each time a point is added or removed, the plot updates automatically.
 Requires the zms2 package for voxel extraction and intensity quantification.
 """
 
+import warnings
 import numpy as np
 import pandas as pd
 import napari
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
+from qtpy.QtCore import QTimer
 
 from curation_utils import crop_to_global_coords
 
@@ -54,12 +56,15 @@ class LiveIntensityWidget:
             self.canvas, name='Intensity Trace', area='bottom'
         )
 
-        # Watch for new layers being added
-        viewer.layers.events.inserted.connect(self._on_layer_inserted)
-
         # Connect to any existing manual points layers
         for layer in viewer.layers:
             self._try_connect_layer(layer)
+
+        # Poll for new layers since viewer.layers.events.inserted
+        # doesn't reliably fire for layers added through the GUI
+        self._poll_timer = QTimer()
+        self._poll_timer.timeout.connect(self._poll_for_new_layers)
+        self._poll_timer.start(1000)
 
     def _setup_axes(self):
         """Configure plot axes styling."""
@@ -70,9 +75,10 @@ class LiveIntensityWidget:
         self.ax.spines['right'].set_visible(False)
         self.fig.tight_layout()
 
-    def _on_layer_inserted(self, event):
-        """Handle new layer being added to viewer."""
-        self._try_connect_layer(event.value)
+    def _poll_for_new_layers(self):
+        """Check for new Points layers that haven't been connected yet."""
+        for layer in self.viewer.layers:
+            self._try_connect_layer(layer)
 
     def _try_connect_layer(self, layer):
         """Connect to a Points layer if it's a manual curation layer."""
@@ -99,37 +105,40 @@ class LiveIntensityWidget:
 
     def _on_data_change(self, event):
         """Called when points data changes (point added or removed)."""
-        crop_points = self._collect_manual_points()
+        try:
+            crop_points = self._collect_manual_points()
 
-        if len(crop_points) == 0:
-            self._cache.clear()
+            if len(crop_points) == 0:
+                self._cache.clear()
+                self._update_plot()
+                return
+
+            # Convert to global coordinates
+            global_points = crop_to_global_coords(crop_points, self.crop_offsets)
+
+            # Build set of current point keys (rounded global coords)
+            current_keys = set()
+            new_points = []
+            new_keys = []
+
+            for pt in global_points:
+                key = tuple(np.round(pt).astype(int))
+                current_keys.add(key)
+                if key not in self._cache:
+                    new_points.append(pt)
+                    new_keys.append(key)
+
+            # Remove cached entries for deleted points
+            for key in set(self._cache.keys()) - current_keys:
+                del self._cache[key]
+
+            # Quantify new points
+            if new_points:
+                self._quantify_points(np.array(new_points), new_keys)
+
             self._update_plot()
-            return
-
-        # Convert to global coordinates
-        global_points = crop_to_global_coords(crop_points, self.crop_offsets)
-
-        # Build set of current point keys (rounded global coords)
-        current_keys = set()
-        new_points = []
-        new_keys = []
-
-        for pt in global_points:
-            key = tuple(np.round(pt).astype(int))
-            current_keys.add(key)
-            if key not in self._cache:
-                new_points.append(pt)
-                new_keys.append(key)
-
-        # Remove cached entries for deleted points
-        for key in set(self._cache.keys()) - current_keys:
-            del self._cache[key]
-
-        # Quantify new points
-        if new_points:
-            self._quantify_points(np.array(new_points), new_keys)
-
-        self._update_plot()
+        except Exception as e:
+            print(f"[LiveQuant] Error in data change handler: {e}")
 
     def _quantify_points(self, global_coords, keys):
         """Extract voxels and quantify intensity for new points one at a time."""
@@ -140,16 +149,19 @@ class LiveIntensityWidget:
                     self.zarr_path, locations, spot_channel=self.spot_channel
                 )
                 if len(voxel_df) == 0:
-                    # Point too close to boundary
                     continue
 
                 df = pd.DataFrame({'data': voxel_df['data'].values})
-                df = self.quantify_fn(df, method=self.method)
+                with warnings.catch_warnings():
+                    warnings.simplefilter('ignore', RuntimeWarning)
+                    df = self.quantify_fn(df, method=self.method)
 
                 if self.method in df.columns:
-                    self._cache[key] = df[self.method].iloc[0]
+                    value = df[self.method].iloc[0]
+                    if np.isfinite(value):
+                        self._cache[key] = value
             except Exception as e:
-                print(f"Warning: Quantification failed for point at t={key[0]}: {e}")
+                print(f"[LiveQuant] Quantification failed for point at t={key[0]}: {e}")
 
     def _update_plot(self):
         """Redraw the intensity vs time plot from cached values."""

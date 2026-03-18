@@ -3,12 +3,13 @@ Process manual spot curations: concatenate and quantify.
 """
 
 import pandas as pd
+import zarr
 from pathlib import Path
 import sys
 
 sys.path.insert(0, '/hpc/projects/group.royer/people/bruno.moretti/code/zms2')
 
-from zms2.spots.detection import extract_spot_voxels_from_zarr
+from zms2.spots.detection import extract_spot_voxels_from_zarr, check_voxel_boundary
 from zms2.spots.quantification import quantify_spots
 
 # ============================================================================
@@ -40,16 +41,27 @@ df = pd.concat(dfs, ignore_index=True)
 
 print(f"Total spots: {len(df)}")
 
+# Filter out boundary spots before extraction, so df and voxel_df stay aligned
+print("Checking for boundary spots...")
+locations = df[['t', 'z', 'y', 'x']].values
+voxel_size = (9, 11, 11)  # default used by extract_spot_voxels_from_zarr
+
+data = zarr.open(zarr_path, 'r')
+if len(data.shape) == 5:
+    im_shape = data.shape[2:]
+else:
+    im_shape = data.shape[1:]
+
+keep_mask = [not check_voxel_boundary(im_shape, loc[1:], voxel_size) for loc in locations]
+n_excluded = len(df) - sum(keep_mask)
+if n_excluded > 0:
+    print(f"Warning: {n_excluded} spots were too close to boundaries and excluded")
+df = df[keep_mask].reset_index(drop=True)
+
 # Extract voxel data from zarr
 print("Extracting voxel data from zarr...")
 locations = df[['t', 'z', 'y', 'x']].values
 voxel_df = extract_spot_voxels_from_zarr(zarr_path, locations, spot_channel=spot_channel)
-
-# Add voxel data to dataframe
-# Note: some spots may be too close to boundaries and excluded
-if len(voxel_df) < len(df):
-    print(f"Warning: {len(df) - len(voxel_df)} spots were too close to boundaries and excluded")
-    df = df.iloc[:len(voxel_df)].reset_index(drop=True)
 
 df['data'] = voxel_df['data'].values
 print(f"Extracted voxels for {len(df)} spots")
