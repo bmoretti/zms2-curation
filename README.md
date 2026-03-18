@@ -8,7 +8,7 @@ Tools for manually curating MS2 spots in napari
 
 1. Edit `curate_nucleus_spots.py` and set the config file path and nucleus ID:
    ```python
-   config_file = '../configs/curation/2025-04-17_wt.yaml'
+   config_file = '../configs/2025-04-17_wt.yaml'
    nucleus_id = 1234
    ```
 
@@ -72,7 +72,7 @@ This concatenates all curation files and adds MS2 intensity measurements.
 
 ### YAML Config Files
 
-The curation workflow uses YAML config files located in `configs/curation/`. These files specify all dataset paths and curation settings. Example structure:
+The curation workflow uses YAML config files located in `configs/`. These files specify all dataset paths and curation settings. Example structure:
 
 ```yaml
 # Experiment metadata
@@ -99,7 +99,16 @@ curation:
     x: 75
   preload_to_memory: true  # Fast scrolling, uses more memory
   show_auto_spots: true    # Show automatic spots for comparison
+  live_quantification: true  # Show intensity plot (requires zms2)
+  spot_channel: 1            # Channel for spot signal (0=H2B, 1=MCP)
+
+# Optional: path to zms2 package if not on PYTHONPATH
+zms2_path: "/path/to/zms2"
 ```
+
+### Live intensity plot
+
+When `live_quantification` is enabled in the config, an intensity vs. time plot appears at the bottom of the napari window. Each time you add a manual spot, the plot updates with the quantified intensity at that point. This requires the [zms2](https://github.com/royerlab/zms2) package — set `zms2_path` in the config if it's not on your `PYTHONPATH`.
 
 ## Output
 
