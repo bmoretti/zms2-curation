@@ -72,11 +72,14 @@ BACKUPS_KEPT = 50
 # Autosave refuses to drop more than this fraction of rows at once (ctrl+s overrides)
 MAX_AUTOSAVE_LOSS = 0.2
 
+# Colours are hex: CSS names are not full intensity ("green" is #008000, half brightness).
+# gamma < 1 lifts dim signal (e.g. MS2 spots) without saturating bright regions as much.
 IMAGE_SHADER = """
 #uicontrol invlerp normalized(range=[{lo}, {hi}])
 #uicontrol vec3 color color(default="{color}")
+#uicontrol float gamma slider(min=0.2, max=2.0, step=0.05, default=1.0)
 void main() {{
-  emitRGB(color * normalized());
+  emitRGB(color * pow(normalized(), gamma));
 }}
 """
 
@@ -210,12 +213,12 @@ class Curator:
             s.layers['H2B'] = neuroglancer.ImageLayer(
                 source=f"zarr://{self.url(self.paths['image'])}",
                 local_position=[0],
-                shader=IMAGE_SHADER.format(lo=h2b_range[0], hi=h2b_range[1], color='magenta'),
+                shader=IMAGE_SHADER.format(lo=h2b_range[0], hi=h2b_range[1], color='#ff00ff'),
                 blend='additive', opacity=1.0)
             s.layers['MCP'] = neuroglancer.ImageLayer(
                 source=f"zarr://{self.url(self.paths['image'])}",
                 local_position=[1],
-                shader=IMAGE_SHADER.format(lo=mcp_range[0], hi=mcp_range[1], color='green'),
+                shader=IMAGE_SHADER.format(lo=mcp_range[0], hi=mcp_range[1], color='#00ff00'),
                 blend='additive', opacity=1.0)
             s.layers['nuclei'] = neuroglancer.SegmentationLayer(
                 source=[f"zarr://{self.url(self.paths['segments'])}",

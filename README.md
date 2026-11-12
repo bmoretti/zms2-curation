@@ -87,7 +87,7 @@ range, path, `hit` if served from memory).
 | `ctrl+s` | save now (edits also autosave after 2 s) |
 
 **Layers:**
-- `H2B` (magenta) and `MCP` (green): contrast sliders in each layer's tab.
+- `H2B` (magenta) and `MCP` (green): in each layer's Rendering tab (right-click the layer tab), drag the histogram range for contrast; the `gamma` slider below 1 brightens dim signal such as MS2 spots without saturating bright regions as much.
 - `nuclei`: curated nuclei are orange in the Seg list.
 - `auto_spots`: zms2 spots drawn as rings. Cyan = passed filters, blue = fill-in, grey = failed. Its shader tab has a `min_prob` slider and fill-in / failed toggles.
 - `curated`: your spots. Orange = manual, yellow = accepted auto spot, grey = rejected auto spot.
