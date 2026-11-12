@@ -109,6 +109,12 @@ python ng_utils.py export --config ../configs/2025-04-17_wt.yaml [--to DIR]
 
 This writes one `manual_points_df_{nucleus_id}.csv` per nucleus (`t,z,y,x,nucleus_id`, spots only, rejected auto spots left out). The default location is `output.directory`. `process_manual_curations.py` and the plotting scripts read these unchanged.
 
+### Same data in napari
+
+`scripts/napari_view.py` opens the prepared data (re-chunked image + segment pyramid) in napari,
+reading through tensorstore, for comparison. It needs zarr >= 3, e.g. the `napari-latest` env:
+`/hpc/mydata/bruno.moretti/envs/napari-latest/bin/python napari_view.py --config ../configs/2025-04-17_wt.yaml --t 200`
+
 ### Tests
 
 - `pytest tests/` runs the unit tests.
