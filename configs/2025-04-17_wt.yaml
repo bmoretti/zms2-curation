@@ -61,3 +61,15 @@ plotting:
   compare_auto: true
   xlim: null
   normalize: true
+
+# Neuroglancer curation (ng_prepare.py / ng_curate.py)
+neuroglancer:
+  # Prepared data, curated_spots.parquet and session.json (null = <experiment>/ng)
+  ng_dir: null
+  # Image to stream (null = data.raw_data). Re-chunked copy made by `ng_prepare.py images`
+  # (16x64x64 blocks), so a time step downloads ~4 MB instead of ~107 MB
+  image: "/hpc/projects/group.royer/people/bruno.moretti/data/epfl/2025-04-17/20250417_142938_Experiment/ng/image.ome.zarr"
+  # Initial contrast limits; adjust in the viewer (saved in the session)
+  contrast:
+    H2B: [200, 8000]
+    MCP: [1500, 6000]

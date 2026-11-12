@@ -50,3 +50,16 @@ plotting:
   compare_auto: false
   xlim: null
   normalize: true
+
+# Neuroglancer curation (ng_prepare.py / ng_curate.py)
+neuroglancer:
+  # Prepared data, curated_spots.parquet and session.json (null = <experiment>/ng)
+  ng_dir: null
+  # dapt's image has ~1 GB chunks and no pyramid: run `ng_prepare.py images` (see README),
+  # then set this to <experiment>/ng/image.ome.zarr
+  # Image to stream (null = data.raw_data)
+  image: null
+  # Initial contrast limits; adjust in the viewer (saved in the session)
+  contrast:
+    H2B: [200, 8000]
+    MCP: [1500, 6000]
