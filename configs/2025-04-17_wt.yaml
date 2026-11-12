@@ -51,3 +51,13 @@ curation:
 
 # Optional: path to zms2 package (if not already on PYTHONPATH)
 zms2_path: "/hpc/projects/group.royer/people/bruno.moretti/code/zms2"
+
+# Plotting settings (used by plot_manual_traces.py)
+plotting:
+  manual_spots_quantified: "/hpc/projects/group.royer/people/bruno.moretti/data/epfl/2025-04-17/20250417_142938_Experiment/spots/manual_spots_quantified.csv"
+  output_manual_traces: "/hpc/projects/group.royer/people/bruno.moretti/data/epfl/2025-04-17/20250417_142938_Experiment/spots/manual_traces_norm.pdf"
+  intensity_method: "gauss3d_dog"
+  overlay_traces: false
+  compare_auto: true
+  xlim: null
+  normalize: true

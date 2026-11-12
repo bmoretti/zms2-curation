@@ -18,7 +18,7 @@ data:
 
   # Path to automatic spots (optional - for comparison/visualization)
   # Set to null to disable automatic spots loading
-  spots: "/hpc/projects/group.royer/people/bruno.moretti/data/epfl/2025-04-09/her7_crispr/20250409_122017_Experiment/spots/spots_quant.pkl"
+  spots: "/hpc/projects/group.royer/people/bruno.moretti/data/epfl/2025-04-09/her7_crispr/20250409_122017_Experiment/spots/spots_filled.pkl"
 
 
 # Output directory for curated points
@@ -41,3 +41,14 @@ curation:
 
   # Show automatic spots in napari for comparison?
   show_auto_spots: true
+
+# Plotting settings (used by plot_manual_traces.py)
+plotting:
+  manual_spots_quantified: "/hpc/projects/group.royer/people/bruno.moretti/data/epfl/2025-04-09/her7_crispr/20250409_122017_Experiment/spots/manual_spots_quantified.csv"
+  output_manual_traces: "/hpc/projects/group.royer/people/bruno.moretti/data/epfl/2025-04-09/her7_crispr/20250409_122017_Experiment/spots/manual_traces_norm.pdf"
+  intensity_method: "gauss3d_dog"
+  overlay_traces: false
+  # Overlay automatic detection traces on each manual trace for comparison
+  compare_auto: true
+  xlim: [0, 310]
+  normalize: true

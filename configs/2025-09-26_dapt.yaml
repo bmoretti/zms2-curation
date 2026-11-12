@@ -40,3 +40,13 @@ curation:
 
   # Show automatic spots in napari for comparison?
   show_auto_spots: true
+
+# Plotting settings (used by plot_manual_traces.py)
+plotting:
+  manual_spots_quantified: "/hpc/projects/group.royer/people/bruno.moretti/data/trulive/2024-09-26/sample_3_dapt_20_uM/2024-09-26_191733/spots/manual_spots_quantified.csv"
+  output_manual_traces: "/hpc/projects/group.royer/people/bruno.moretti/data/trulive/2024-09-26/sample_3_dapt_20_uM/2024-09-26_191733/spots/manual_traces_norm.pdf"
+  intensity_method: "gauss3d_dog"
+  overlay_traces: false
+  compare_auto: false
+  xlim: null
+  normalize: true
