@@ -214,12 +214,18 @@ class Curator:
                 source=f"zarr://{self.url(self.paths['image'])}",
                 local_position=[0],
                 shader=IMAGE_SHADER.format(lo=h2b_range[0], hi=h2b_range[1], color='#ff00ff'),
-                blend='additive', opacity=1.0)
+                blend='additive', opacity=1.0,
+                # Use a coarser level once voxels are < 2 screen px: zoomed-out time
+                # steps load ~4x less data (curation zoom still uses full resolution)
+                cross_section_render_scale=2)
             s.layers['MCP'] = neuroglancer.ImageLayer(
                 source=f"zarr://{self.url(self.paths['image'])}",
                 local_position=[1],
                 shader=IMAGE_SHADER.format(lo=mcp_range[0], hi=mcp_range[1], color='#00ff00'),
-                blend='additive', opacity=1.0)
+                blend='additive', opacity=1.0,
+                # Use a coarser level once voxels are < 2 screen px: zoomed-out time
+                # steps load ~4x less data (curation zoom still uses full resolution)
+                cross_section_render_scale=2)
             s.layers['nuclei'] = neuroglancer.SegmentationLayer(
                 source=[f"zarr://{self.url(self.paths['segments'])}",
                         f"precomputed://{self.url(self.paths['segment_properties'])}"],
